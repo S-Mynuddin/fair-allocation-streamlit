@@ -7,7 +7,7 @@ st.set_page_config(page_title="Fair Allocation Tool", layout="wide")
 
 st.title("📦 Fair Allocation Tool")
 
-st.info("Upload **The Replenishment Excel** file. BOM is fixed and managed internally.")
+st.info("Upload ** The Replenishment Excel** file. BOM is fixed and managed internally ")
 
 repl_file = st.file_uploader(
     "Upload Replenishment Excel",
@@ -56,4 +56,5 @@ if repl_file:
 
             except Exception as e:
                 st.error(f"❌ Error: {e}")
+
 
