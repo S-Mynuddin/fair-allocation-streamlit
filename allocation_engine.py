@@ -8,7 +8,7 @@ def normalize_id(x):
     if pd.isna(x):
         return None
     x = str(x).strip()
-    if x.endswith(".0"):  # Excel numeric artifact
+    if x.endswith(".0"):
         x = x[:-2]
     return x
 
@@ -45,7 +45,7 @@ def build_stock(df):
     return stock
 
 # ============================================================
-# BUILD BOM MAPPING (PRODUCT ID → COMPONENT ID)
+# BUILD BOM MAPPING
 # ============================================================
 def create_bom_mapping(bom_file):
     bom = pd.read_excel(bom_file, sheet_name="BOM")
@@ -60,7 +60,6 @@ def create_bom_mapping(bom_file):
     ]
 
     bom_mapping = {}
-
     for pid, grp in bom.groupby('Product ID'):
         comps = {}
         for _, r in grp.iterrows():
@@ -137,13 +136,12 @@ def run_allocation(repl_file, bom_file, repl_sheet, stage_sheet):
             'Allocated': 0,
             'Components': components,
             'Components_Used': {},
-            'Extra': row.to_dict()
+            'Extra': row.to_dict()   # 👈 keep full original row
         })
 
     # -------- Fair Round-Robin Allocation --------
     while True:
         any_alloc = False
-
         for p in products:
             if p['Allocated'] >= p['Target']:
                 continue
@@ -155,22 +153,32 @@ def run_allocation(repl_file, bom_file, repl_sheet, stage_sheet):
                     p['Components_Used'][c] = p['Components_Used'].get(c, 0) + q
                 p['Allocated'] += 1
                 any_alloc = True
-
         if not any_alloc:
             break
 
-    # -------- Product Allocation Output --------
-    allocation_df = pd.DataFrame([
-        {
+    # ============================================================
+    # PRODUCT ALLOCATION OUTPUT (ENRICHED)
+    # ============================================================
+    allocation_rows = []
+
+    for p in products:
+        row = {
             'Product_ID': p['Product_ID'],
             'Product': p['Product'],
             'Type': p['Type'],
             'Forecast': p['Forecast'],
             'Allocated': p['Allocated'],
-            'Components_Used': "; ".join(f"{k}:{v}" for k, v in p['Components_Used'].items())
+            'Components_Used': "; ".join(
+                f"{k}:{v}" for k, v in p['Components_Used'].items()
+            )
         }
-        for p in products
-    ])
+
+        # 👇 ADD ALL ORIGINAL REPLENISHMENT COLUMNS
+        row.update(p['Extra'])
+
+        allocation_rows.append(row)
+
+    allocation_df = pd.DataFrame(allocation_rows)
 
     # -------- Stock Report --------
     stock_rows = []
